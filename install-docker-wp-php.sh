@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ========================================
-# Script de Instalação Docker + WordPress (sem compose)
+# Script de Instalação Docker + WordPress + phpMyAdmin (sem compose)
 # Autor: Thiago Motta
 # ========================================
 
@@ -12,7 +12,6 @@ DB_USER=${DB_USER:-"wp_admin"}
 DB_PASSWORD=${DB_PASSWORD:-"senha_wp_segura_456"}
 WP_CONTAINER_NAME=${WP_CONTAINER_NAME:-"meu_wordpress"}
 DB_CONTAINER_NAME=${DB_CONTAINER_NAME:-"mysql_wordpress"}
-NETWORK_NAME=${NETWORK_NAME:-"wordpress_network"}
 
 # Instalar Docker
 sudo apt update -y
@@ -29,8 +28,8 @@ sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin dock
 # Configurar usuário
 sudo usermod -aG docker $USER
 
-# Criar rede
-sudo docker network create $NETWORK_NAME
+# Criar rede para os containers se comunicarem
+sudo docker network create wordpress_network
 
 # Criar volume para o MySQL
 sudo docker volume create db_data
@@ -41,7 +40,7 @@ sudo docker volume create wordpress_data
 # Executar container MySQL
 sudo docker run -d \
   --name $DB_CONTAINER_NAME \
-  --network $NETWORK_NAME \
+  --network wordpress_network \
   -e MYSQL_ROOT_PASSWORD=$DB_ROOT_PASSWORD \
   -e MYSQL_DATABASE=$DB_NAME \
   -e MYSQL_USER=$DB_USER \
@@ -56,7 +55,7 @@ sleep 15
 # Executar container WordPress
 sudo docker run -d \
   --name $WP_CONTAINER_NAME \
-  --network $NETWORK_NAME \
+  --network wordpress_network \
   -e WORDPRESS_DB_HOST=$DB_CONTAINER_NAME:3306 \
   -e WORDPRESS_DB_USER=$DB_USER \
   -e WORDPRESS_DB_PASSWORD=$DB_PASSWORD \
@@ -66,10 +65,10 @@ sudo docker run -d \
   --restart unless-stopped \
   wordpress:latest
 
-# Executar container phpMyAdmin (opcional)
+# Executar container phpMyAdmin
 sudo docker run -d \
   --name phpmyadmin \
-  --network $NETWORK_NAME \
+  --network wordpress_network \
   -e PMA_HOST=$DB_CONTAINER_NAME \
   -e PMA_PORT=3306 \
   -p 8080:80 \
